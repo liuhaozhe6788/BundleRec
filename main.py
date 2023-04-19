@@ -423,4 +423,4 @@ def run_taobao_main():
 
 
 if __name__ == '__main__':
-    run_bundle_main()
+    run_ele_main()
