@@ -1,4 +1,5 @@
 import os
+import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torch.utils.data import DataLoader
@@ -105,7 +106,7 @@ def ele_main(args, v_num, train_dataset, val_dataset, test_dataset):
                 target_col=target_col,
                 time_col=time_col,
                 args=args)
-    logger = TensorBoardLogger(save_dir='./ele_logs/ele_BST',
+    logger = TensorBoardLogger(save_dir='logs/ele_logs/ele_BST',
                                name='fixed',
                                version=v_num)
     callback = ModelCheckpoint(monitor="val/auc",
@@ -130,25 +131,41 @@ def ele_main(args, v_num, train_dataset, val_dataset, test_dataset):
                          fast_dev_run=False,
                          enable_progress_bar=True)
     model.to('cuda')
-    trainer.fit(model=model,
-                train_dataloaders=DataLoader(train_dataset,
-                                             batch_size=args.batch_size,
-                                             shuffle=True,
-                                             num_workers=0
-                                             ),
-                val_dataloaders=DataLoader(val_dataset,
-                                           batch_size=args.batch_size,
-                                           shuffle=False,
-                                           num_workers=0
-                                           ),
+    # trainer.fit(model=model,
+    #             train_dataloaders=DataLoader(train_dataset,
+    #                                          batch_size=args.batch_size,
+    #                                          shuffle=True,
+    #                                          num_workers=0
+    #                                          ),
+    #             val_dataloaders=DataLoader(val_dataset,
+    #                                        batch_size=args.batch_size,
+    #                                        shuffle=False,
+    #                                        num_workers=0
+    #                                        ),
+    #             )
+
+    # trainer.test(ckpt_path=callback.best_model_path,
+    #             dataloaders=DataLoader(test_dataset,
+    #                                 batch_size=args.batch_size,
+    #                                 shuffle=False,
+    #                                 num_workers=0
+    #                                 ),
+    #             )
+
+    # NOTE: 对预训练模型进行测试
+    checkpoint = torch.load("logs/ele_logs/version_108/checkpoints/epoch=4-step=15565-val_auc=0.6267-log_loss=0.0886.ckpt")
+
+    model.load_state_dict(checkpoint["state_dict"])
+
+    model.val()
+
+    trainer.test(model=model,
+                dataloaders=DataLoader(test_dataset,
+                                    batch_size=args.batch_size,
+                                    shuffle=False,
+                                    num_workers=0
+                                    ),
                 )
-    trainer.test(ckpt_path=callback.best_model_path,
-                 dataloaders=DataLoader(test_dataset,
-                                        batch_size=args.batch_size,
-                                        shuffle=False,
-                                        num_workers=0
-                                        ),
-                 )
 
 
 def movie_main(args, v_num, train_dataset, val_dataset, test_dataset):
@@ -327,7 +344,7 @@ def run_ele_main():
     parser.add_argument('--lr', default=1e-5, type=float)
     parser.add_argument('--use_time', default=True, type=bool)
     parser.add_argument('--use_int', default=False, type=bool)
-    parser.add_argument('--int_num', default=2, type=int)
+    parser.add_argument('--int_num', default=0, type=int)
     parser.add_argument('--log_base', default=2, type=float)
     parser.add_argument("--transformer_num", default=1, type=int)
     parser.add_argument("--embedding", default=8)
@@ -338,8 +355,10 @@ def run_ele_main():
     parser.set_defaults(max_epochs=50)
     args = parser.parse_args()
 
-    train_dataset = EleDataset(os.path.join(args.data_path, "train_data.csv"), args.max_len)
-    val_dataset = EleDataset(os.path.join(args.data_path, "val_data.csv"), args.max_len)
+    # train_dataset = EleDataset(os.path.join(args.data_path, "train_data.csv"), args.max_len)
+    # val_dataset = EleDataset(os.path.join(args.data_path, "val_data.csv"), args.max_len)
+    train_dataset = None
+    val_dataset = None
     test_dataset = EleDataset(os.path.join(args.data_path, "test_data.csv"), args.max_len, True)
 
     v_num = None

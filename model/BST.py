@@ -134,7 +134,7 @@ class BST(pl.LightningModule):
 
         self.criterion = nn.CrossEntropyLoss().to(self.device)
         self.softmax_func = nn.Softmax(dim=1).to(self.device)
-        self.auc = torchmetrics.AUROC(num_classes=2).to(self.device)
+        self.auc = torchmetrics.AUROC(task="binary", num_classes=2).to(self.device)
 
     def padding(self, item, padding_num: int):
         for col in self.transformer_col:

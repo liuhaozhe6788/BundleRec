@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 import pandas as pd
+import swifter
 import numpy as np
 
 
@@ -16,7 +17,8 @@ class EleDataset(Dataset):
         print(f"loaded {data_path}")
         self.test = test
 
-        def str2ndarray(x: list):
+        def str2ndarray(x: str):
+            x = x.split(';')
             seq = np.zeros(max_len, dtype=np.float32)
             length = len(x)
             seq[:length] = x
@@ -24,7 +26,7 @@ class EleDataset(Dataset):
             return seq
 
         for col_name in transformer_col:
-            self.df[col_name] = self.df[col_name].str.split(';').apply(str2ndarray)
+            self.df[col_name] = self.df[col_name].swifter.apply(str2ndarray)
         print("Transformed done")
 
     def __len__(self):

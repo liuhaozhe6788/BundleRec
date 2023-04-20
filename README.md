@@ -4,3 +4,8 @@
 4. 原始数据集在./data/raw_data路径下
 5. 处理后的数据集分别在./data/bundle_time，./data/ele_time，./data/movielens1m，./data/taobao
 6. 处理后的数据集中包含lbes.pkl、mms.pkl、train_data.csv、val_data.csv、test_data.csv这5个文件
+### 打开Tensorboard
+
+```
+tensorboard --logdir logs/<name>_logs --host localhost --port 0000
+```
