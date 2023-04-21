@@ -1,0 +1,42 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "${workspaceFolder}/main.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args":[
+                "--dataset",
+                "ele",
+                "--batch_size",
+                "4",
+                "--lr",
+                "1e-5",
+                "--use_time",
+                "--int_num",
+                "0",
+                "--log_base",
+                "5",
+                "--transformer_num",
+                "1",
+                "--embedding",
+                "8", 
+                "--num_head",
+                "8",
+                "--seed",
+                "2022",
+                "--data_path",
+                "./data/ele_time",
+                "--max_len",
+                "51",
+                // "--force_restart"
+            ]
+        }
+    ]
+}

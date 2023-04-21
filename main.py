@@ -109,63 +109,64 @@ def ele_main(args, v_num, train_dataset, val_dataset, test_dataset):
     logger = TensorBoardLogger(save_dir='logs/ele_logs/ele_BST',
                                name='fixed',
                                version=v_num)
+    
     callback = ModelCheckpoint(monitor="val/auc",
-                               mode="max",
-                               save_top_k=1,
-                               filename='epoch={epoch}-step={step}-val_auc={val/auc:.4f}-log_loss={val/loss:.4f}',
-                               save_weights_only=True,
-                               auto_insert_metric_name=False)
+                mode="max",
+                save_top_k=1,
+                filename='epoch={epoch}-step={step}-val_auc={val/auc:.4f}-log_loss={val/loss:.4f}',
+                save_weights_only=True,
+                auto_insert_metric_name=False)
     callback2 = EarlyStopping(monitor="val/auc",
-                              mode="max",
-                              patience=1)
+                            mode="max",
+                            patience=1)
     trainer = pl.Trainer(accelerator='gpu',
-                         devices=1,
-                         callbacks=[callback, callback2],
-                         # auto_scale_batch_size='binsearch',
-                         # auto_lr_find=True,
-                         val_check_interval=None,
-                         max_epochs=args.max_epochs,
-                         logger=logger,
-                         log_every_n_steps=50,
-                         num_sanity_val_steps=2,
-                         fast_dev_run=False,
-                         enable_progress_bar=True)
+                        devices=1,
+                        callbacks=[callback, callback2],
+                        # auto_scale_batch_size='binsearch',
+                        # auto_lr_find=True,
+                        val_check_interval=None,
+                        max_epochs=args.max_epochs,
+                        logger=logger,
+                        log_every_n_steps=50,
+                        num_sanity_val_steps=2,
+                        fast_dev_run=False,
+                        enable_progress_bar=True)
     model.to('cuda')
-    # trainer.fit(model=model,
-    #             train_dataloaders=DataLoader(train_dataset,
-    #                                          batch_size=args.batch_size,
-    #                                          shuffle=True,
-    #                                          num_workers=0
-    #                                          ),
-    #             val_dataloaders=DataLoader(val_dataset,
-    #                                        batch_size=args.batch_size,
-    #                                        shuffle=False,
-    #                                        num_workers=0
-    #                                        ),
-    #             )
 
-    # trainer.test(ckpt_path=callback.best_model_path,
-    #             dataloaders=DataLoader(test_dataset,
-    #                                 batch_size=args.batch_size,
-    #                                 shuffle=False,
-    #                                 num_workers=0
-    #                                 ),
-    #             )
+    if args.force_restart:
+        trainer.fit(model=model,
+                    train_dataloaders=DataLoader(train_dataset,
+                                                batch_size=args.batch_size,
+                                                shuffle=True,
+                                                num_workers=0
+                                                ),
+                    val_dataloaders=DataLoader(val_dataset,
+                                            batch_size=args.batch_size,
+                                            shuffle=False,
+                                            num_workers=0
+                                            ),
+                    )
 
-    # NOTE: 对预训练模型进行测试
-    checkpoint = torch.load("logs/ele_logs/version_108/checkpoints/epoch=4-step=15565-val_auc=0.6267-log_loss=0.0886.ckpt")
+        trainer.test(ckpt_path=callback.best_model_path,
+                    dataloaders=DataLoader(test_dataset,
+                                        batch_size=args.batch_size,
+                                        shuffle=False,
+                                        num_workers=0
+                                        ),
+                    )
 
-    model.load_state_dict(checkpoint["state_dict"])
+    else:
+        checkpoint = torch.load("logs/ele_logs/version_108/checkpoints/epoch=4-step=15565-val_auc=0.6267-log_loss=0.0886.ckpt")
 
-    model.val()
+        model.load_state_dict(checkpoint["state_dict"])
 
-    trainer.test(model=model,
-                dataloaders=DataLoader(test_dataset,
-                                    batch_size=args.batch_size,
-                                    shuffle=False,
-                                    num_workers=0
-                                    ),
-                )
+        trainer.test(model=model,
+                    dataloaders=DataLoader(test_dataset,
+                                        batch_size=args.batch_size,
+                                        shuffle=False,
+                                        num_workers=0
+                                        ),
+                    )
 
 
 def movie_main(args, v_num, train_dataset, val_dataset, test_dataset):
@@ -338,39 +339,24 @@ def run_bundle_main():
                 bundle_main(args, v_num, train_dataset, val_dataset, test_dataset)
 
 
-def run_ele_main():
-    parser = ArgumentParser()
-    parser.add_argument('--batch_size', default=512, type=int)
-    parser.add_argument('--lr', default=1e-5, type=float)
-    parser.add_argument('--use_time', default=True, type=bool)
-    parser.add_argument('--use_int', default=False, type=bool)
-    parser.add_argument('--int_num', default=0, type=int)
-    parser.add_argument('--log_base', default=2, type=float)
-    parser.add_argument("--transformer_num", default=1, type=int)
-    parser.add_argument("--embedding", default=8)
-    parser.add_argument("--num_head", default=8, type=int)
-    parser.add_argument('--seed', default=2022, type=int)
-    parser.add_argument('--data_path', default="./data/ele_time", type=str)
-    parser.add_argument('--max_len', default=51, type=int)
-    parser.set_defaults(max_epochs=50)
-    args = parser.parse_args()
-
-    # train_dataset = EleDataset(os.path.join(args.data_path, "train_data.csv"), args.max_len)
-    # val_dataset = EleDataset(os.path.join(args.data_path, "val_data.csv"), args.max_len)
-    train_dataset = None
-    val_dataset = None
+def run_ele_main(args):
+    train_dataset = EleDataset(os.path.join(args.data_path, "train_data.csv"), args.max_len) if args.force_restart else None
+    val_dataset = EleDataset(os.path.join(args.data_path, "val_data.csv"), args.max_len) if args.force_restart else None
     test_dataset = EleDataset(os.path.join(args.data_path, "test_data.csv"), args.max_len, True)
 
     v_num = None
 
-    for seed in [0]:
-        for transformer_num in [1]:
-            for use_time, log_base in [(True, 5), (False, 0)]:
-                for use_int, int_num in [(True, 1), (True, 2), (True, 3)]:
-                    for lr in [1e-5]:
-                        args.seed, args.transformer_num, args.log_base, args.int_num, args.use_time, args.use_int, args.lr \
-                                = seed, transformer_num, log_base, int_num, use_time, use_int, lr
-                        ele_main(args, f"lr=1e-5 mean_std=1 res=concat log_base={log_base} int_num={int_num}", train_dataset, val_dataset, test_dataset)
+    if args.force_restart:
+        for seed in [0]:
+            for transformer_num in [1]:
+                for use_time, log_base in [(True, 5), (False, 0)]:
+                    for use_int, int_num in [(True, 1), (True, 2), (True, 3)]:
+                        for lr in [1e-5]:
+                            args.seed, args.transformer_num, args.log_base, args.int_num, args.use_time, args.use_int, args.lr \
+                                    = seed, transformer_num, log_base, int_num, use_time, use_int, lr
+                            ele_main(args, f"lr=1e-5 mean_std=1 res=concat log_base={log_base} int_num={int_num}", train_dataset, val_dataset, test_dataset)
+    else:
+        ele_main(args, f"lr=1e-5 mean_std=1 res=concat log_base={args.log_base} int_num={args.int_num}", train_dataset, val_dataset, test_dataset)
 
 
 def run_movie_main():
@@ -442,4 +428,28 @@ def run_taobao_main():
 
 
 if __name__ == '__main__':
-    run_ele_main()
+    parser = ArgumentParser()
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--batch_size', default=512, type=int)
+    parser.add_argument('--lr', default=1e-4, type=float)
+    parser.add_argument('--use_time', action="store_true")  # True表示使用时间信息，否则使用位置嵌入
+    parser.add_argument('--use_int', action="store_true")  # 是否使用特征交互层
+    parser.add_argument('--int_num', default=2, type=int)  # 使用特征交互层的层数
+    parser.add_argument('--log_base', default=10, type=float)  # log_base>1时表示对数时间函数的底数，log_base=-1时表示使用动态底数，log_base=-2时表示使用线性时间函数
+    parser.add_argument("--transformer_num", default=2, type=int)  # transformer层的层数
+    parser.add_argument("--embedding", default=8, type=int)  # 类别特征的embedding向量维度
+    parser.add_argument("--num_head", default=8, type=int)  # transformer层中多头自注意力的头数
+    parser.add_argument('--seed', default=2022, type=int)
+    parser.add_argument('--data_path', type=str)
+    parser.add_argument('--max_len', default=8, type=int)  # 最长序列长度
+    parser.add_argument('--force_restart', action="store_true")  # 是否从头训练模型
+    parser.set_defaults(max_epochs=50)
+    args = parser.parse_args()
+    if args.dataset == "ele":
+        run_ele_main(args)
+    elif args.dataset == "taobao":
+        run_taobao_main()
+    elif args.dataset == "movie":
+        run_movie_main()
+    elif args.dataset == "bundle":
+        run_bundle_main()
