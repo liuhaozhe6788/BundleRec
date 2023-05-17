@@ -19,7 +19,7 @@ class EleDataset(Dataset):
 
         def str2ndarray(x: str):
             x = x.split(';')
-            seq = np.zeros(max_len, dtype=np.int)
+            seq = np.zeros(max_len, dtype=np.float32)
             length = len(x)
             seq[:length] = x
             seq[length:] = -1

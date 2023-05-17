@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
 import numpy as np
+import swifter
 
 
 class MovieDataset(Dataset):
@@ -16,12 +17,12 @@ class MovieDataset(Dataset):
 
         def str2ndarray(x: str):
             x = x[1:-1].split(",")
-            seq = np.full(max_len, -1, dtype=np.float32)
+            seq = np.full(max_len, -1, dtype=np.int32)
             seq[-len(x):] = x
             return seq
 
         for col_name in user_changeable_col:
-            self.df[col_name] = self.df[col_name].apply(str2ndarray)
+            self.df[col_name] = self.df[col_name].swifter.apply(str2ndarray)
         print("Transformed done")
 
     def __len__(self):

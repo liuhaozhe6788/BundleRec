@@ -22,10 +22,11 @@ class PositionEmbedding(nn.Module):
 
 
 class TimeEmbedding(nn.Module):
-    def __init__(self, max_len, d_model, log_base):
+    def __init__(self, d_model, log_base, args):
         super(TimeEmbedding, self).__init__()
-        self.te = nn.Embedding(2001 if log_base == -2 else max_len, d_model, padding_idx=-1)
+        self.te = nn.Embedding(args.num_embeds, d_model, padding_idx=-1)
         self.log_base = log_base
+        self.dataset_name = args.dataset
 
     def forward(self, timestamps):
         """
@@ -35,12 +36,14 @@ class TimeEmbedding(nn.Module):
         timestamps = torch.div(timestamps, 3600, rounding_mode='floor')
 
         # timestamps为实际时间时使用(电影、九九、淘宝数据集中使用)
-        seq_len = timestamps.shape[1]
-        cur_time = timestamps.max(dim=1)[0]
-        delta_times = cur_time.repeat(seq_len, 1).transpose(0, 1) - timestamps
+        if self.dataset_name == "ele":
+            # timestamps为时间差时使用(饿了么数据集中使用)
+            delta_times = timestamps
+        else:
+            seq_len = timestamps.shape[1]
+            cur_time = timestamps.max(dim=1)[0]
+            delta_times = cur_time.repeat(seq_len, 1).transpose(0, 1) - timestamps
 
-        # timestamps为时间差时使用(饿了么数据集中使用)
-        # delta_times = timestamps
 
         if self.log_base == -2:
             # 线性时间-位置转换函数
@@ -103,7 +106,7 @@ class BST(pl.LightningModule):
                                       for col in transformer_col])
         self.d_dnn = sum([self.embedding_dict[col].embedding_dim if col in spare_features else 1 for col in dnn_col])
         if self.hparams.use_time:
-            self.time_embedding = TimeEmbedding(50, self.d_transformer, self.hparams.log_base)
+            self.time_embedding = TimeEmbedding(self.d_transformer, self.hparams.log_base, args)
         else:
             self.position_embedding = PositionEmbedding(args.max_len, self.d_transformer)
 

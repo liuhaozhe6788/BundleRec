@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader, Dataset
 import pandas as pd
 import numpy as np
+import swifter
 
 
 class TaobaoDataset(Dataset):
@@ -19,7 +20,7 @@ class TaobaoDataset(Dataset):
             return seq
 
         for col_name in user_changeable_col:
-            self.df[col_name] = self.df[col_name].apply(str2ndarray)
+            self.df[col_name] = self.df[col_name].swifter.apply(str2ndarray)
         print("Transformed done")
 
     def __len__(self):

@@ -13,16 +13,13 @@
             "justMyCode": true,
             "args":[
                 "--dataset",
-                "ele",
+                "movie",
                 "--batch_size",
-                "4",
+                "512",
                 "--lr",
-                "1e-5",
-                "--use_time",
-                "--int_num",
-                "0",
+                "1e-4",
                 "--log_base",
-                "5",
+                "0",
                 "--transformer_num",
                 "1",
                 "--embedding",
@@ -30,12 +27,11 @@
                 "--num_head",
                 "8",
                 "--seed",
-                "2022",
+                "123460",
                 "--data_path",
-                "./data/ele_time",
+                "./data/movielens1m",
                 "--max_len",
-                "51",
-                // "--force_restart"
+                "8"
             ]
         }
     ]
