@@ -1,1 +1,1 @@
-python main.py --dataset bundle --batch_size 512 --lr 1e-4 --transformer_num 2  --num_head 8 --seed 0 --data_path ./data/bundle_time --max_len 8
+python main.py --dataset bundle --batch_size 512 --lr 1e-4 --transformer_num 2  --embedding 9 --num_head 8 --seed 0 --data_path ./data/bundle_time --max_len 8 --force_restart

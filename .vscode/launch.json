@@ -11,9 +11,9 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args":[
+            "args": [
                 "--dataset",
-                "movie",
+                "bundle",
                 "--batch_size",
                 "512",
                 "--lr",
@@ -21,17 +21,18 @@
                 "--log_base",
                 "0",
                 "--transformer_num",
-                "1",
+                "2",
                 "--embedding",
-                "8", 
+                "8",
                 "--num_head",
                 "8",
                 "--seed",
                 "123460",
                 "--data_path",
-                "./data/movielens1m",
+                "./data/bundle_time",
                 "--max_len",
-                "8"
+                "8",
+                "--force_restart"
             ]
         }
     ]

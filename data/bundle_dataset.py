@@ -26,8 +26,8 @@ class BundleDataset(Dataset):
             return seq
 
         for col_name in user_changeable_col:
-            self.df[col_name] = self.df[col_name].apply(str2ndarray)
-        self.df['register_time'] = self.df['register_time'].apply(lambda x: np.float32(x))
+            self.df[col_name] = self.df[col_name].swifter.apply(str2ndarray)
+        self.df['register_time'] = self.df['register_time'].swifter.apply(lambda x: np.float32(x))
         self.df[target_col[0]] = self.df[target_col[0]].swifter.apply(lambda x: np.int32(x[1:-1].split(",")[-1]))
         print("Transformed done")
 
