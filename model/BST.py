@@ -90,20 +90,20 @@ class BST(pl.LightningModule):
                 int(math.sqrt(self.lbes[feature].classes_.size)) if self.hparams.embedding == -1 else self.hparams.embedding,
                 padding_idx=-1
             )
-        if self.hparams.use_int:
-            self.d_transformer = sum([self.embedding_dict[col].embedding_dim
-                                      if col in cat_features
-                                      else self.hparams.embedding
-                                      for col in transformer_col])
-            self.num_embedding_col = list(set(transformer_col) & set(num_features))
-            self.num_embedding_dict = nn.ModuleDict()
-            for feature in self.num_embedding_col:
-                self.num_embedding_dict[feature] = nn.Embedding(1, self.hparams.embedding)
-        else:
-            self.d_transformer = sum([self.embedding_dict[col].embedding_dim
-                                      if col in cat_features
-                                      else 1
-                                      for col in transformer_col])
+        # if self.hparams.use_int:
+        self.d_transformer = sum([self.embedding_dict[col].embedding_dim
+                                    if col in cat_features
+                                    else self.hparams.embedding
+                                    for col in transformer_col])
+        self.num_embedding_col = list(set(transformer_col) & set(num_features))
+        self.num_embedding_dict = nn.ModuleDict()
+        for feature in self.num_embedding_col:
+            self.num_embedding_dict[feature] = nn.Embedding(1, self.hparams.embedding)
+        # else:
+        #     self.d_transformer = sum([self.embedding_dict[col].embedding_dim
+        #                               if col in cat_features
+        #                               else 1
+        #                               for col in transformer_col])
         self.d_dnn = sum([self.embedding_dict[col].embedding_dim if col in cat_features else 1 for col in dnn_col])
         if self.hparams.use_time:
             self.time_embedding = TimeEmbedding(self.d_transformer, self.hparams.log_base, args)
@@ -162,9 +162,8 @@ class BST(pl.LightningModule):
             item[col] = self.embedding_dict[col](item[col].long())
         for col in self.num_features:
             item[col] = item[col].float().unsqueeze(dim=-1)
-        if self.hparams.use_int:
-            for col in self.num_embedding_col:
-                item[col] = item[col] * self.num_embedding_dict[col].weight[0]
+        for col in self.num_embedding_col:
+            item[col] = item[col] * self.num_embedding_dict[col].weight[0]
         dnn_input = torch.cat([item[col] for col in self.dnn_col], dim=-1)
         transformer_input = torch.cat([item[col] for col in self.transformer_col], dim=-1)
         return dnn_input, transformer_input, item[self.time_col], target, mask

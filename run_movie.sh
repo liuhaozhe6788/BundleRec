@@ -1,1 +1,1 @@
-python main.py --dataset movie --batch_size 512 --lr 1e-4 --transformer_num 2 --embedding 8 --num_head 8 --seed 123460 --data_path ./data/movielens1m --max_len 8 --force_restart
+python main.py --dataset movie --batch_size 512 --lr 1e-4 --transformer_num 2 --embedding 16  --num_head 8 --seed 123460 --data_path ./data/movielens1m --max_len 8 --force_restart
