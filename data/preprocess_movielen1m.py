@@ -3,6 +3,7 @@ import pickle
 
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+import swifter
 
 from gen_sequence import split_train_val_test_by_time
 
@@ -16,21 +17,24 @@ def gen_movielen_1m_data():
         root_path + "ml_1m/users.dat",
         sep="::",
         names=["user_id", "sex", "age_group", "occupation", "zip_code"],
+        engine='python'
     )
 
     ratings = pd.read_csv(
         root_path + "ml_1m/ratings.dat",
         sep="::",
         names=["user_id", "movie_id", "rating", "timestamp"],
+        engine='python'
     )
 
     movies = pd.read_csv(
-        root_path + "ml_1m/movies.dat", sep="::", names=["movie_id", "title", "genres"], encoding="ISO-8859-1"
+        root_path + "ml_1m/movies.dat", sep="::", names=["movie_id", "title", "genres"], encoding="ISO-8859-1",
+        engine='python'
     )
 
 
     ## Movies
-    movies["year"] = movies["title"].apply(lambda x: x[-5:-1])
+    movies["year"] = movies["title"].swifter.apply(lambda x: x[-5:-1])
     movies.year = pd.Categorical(movies.year)
     movies["year"] = movies.year.cat.codes
     ## Users
@@ -67,7 +71,7 @@ def gen_movielen_1m_data():
         "Western",
     ]
     for genre in genres:
-        movies[genre] = movies["genres"].apply(
+        movies[genre] = movies["genres"].swifter.apply(
             lambda values: int(genre in values.split("|"))
         )
     data = pd.merge(ratings, movies, on='movie_id')
@@ -142,17 +146,17 @@ def gen_movielen_1m_data():
 
     for col in ratings_data.columns:
         if col[-1] == 's':
-            ratings_data[col] = ratings_data[col].apply(
+            ratings_data[col] = ratings_data[col].swifter.apply(
                 lambda xs: create_sequences(xs, sequence_length, step_size)
             )
     ratings_data = ratings_data.explode([col for col in ratings_data.columns if col[-1] == 's'], ignore_index=True)
 
-    ratings_data['label'] = ratings_data['labels'].apply(lambda x: x[-1])
+    ratings_data['label'] = ratings_data['labels'].swifter.apply(lambda x: x[-1])
     ratings_data.drop('labels', axis=1, inplace=True)
 
     ratings_data = pd.merge(ratings_data, users, on='user_id')
 
-    ratings_data['cur_time'] = ratings_data['timestamps'].apply(lambda x: x[-1])
+    ratings_data['cur_time'] = ratings_data['timestamps'].swifter.apply(lambda x: x[-1])
     train, val, test = split_train_val_test_by_time(ratings_data, 'user_id', 'cur_time')
     train.to_csv(path+"train_data.csv", index=False, sep=',')
     val.to_csv(path+"val_data.csv", index=False, sep=',')
