@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+    
         {
             "name": "${workspaceFolder}/main.py",
             "type": "python",
@@ -17,17 +18,17 @@
                 "--batch_size",
                 "512",
                 "--lr",
-                "1e-4",
-                "--log_base",
-                "0",
+                "1e-3",
                 "--transformer_num",
                 "2",
                 "--embedding",
                 "8",
                 "--num_head",
                 "8",
+                "--time_aware",
+                "True",
                 "--seed",
-                "123460",
+                "0",
                 "--data_path",
                 "./data/bundle_time",
                 "--max_len",

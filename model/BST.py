@@ -6,6 +6,8 @@ import torchmetrics
 from .utils import get_best_confusion_matrix
 from torch import nn
 from .interacting_layer import InteractingLayer
+from torch.nn import TransformerEncoderLayer
+from .TiSAS_enc_layer import TimeAwareTransformerEncoderLayer
 
 
 class PositionEmbedding(nn.Module):
@@ -66,12 +68,12 @@ class TimeEmbedding(nn.Module):
 
 
 class BST(pl.LightningModule):
-    def __init__(self, cat_features, num_features, dnn_col, transformer_col, target_col, time_col, args):
+    def __init__(self, sparse_features, dense_features, dnn_col, transformer_col, target_col, time_col, args):
         super().__init__()
         super(BST, self).__init__()
 
-        self.cat_features = cat_features
-        self.num_features = num_features
+        self.sparse_features = sparse_features
+        self.dense_features = dense_features
         self.dnn_col = dnn_col
         self.transformer_col = transformer_col
         self.target_col = target_col
@@ -84,7 +86,7 @@ class BST(pl.LightningModule):
             self.mms = pickle.load(file)
 
         self.embedding_dict = nn.ModuleDict()
-        for feature in self.cat_features:
+        for feature in self.sparse_features:
             self.embedding_dict[feature] = nn.Embedding(
                 self.lbes[feature].classes_.size + 1,
                 int(math.sqrt(self.lbes[feature].classes_.size)) if self.hparams.embedding == -1 else self.hparams.embedding,
@@ -92,33 +94,40 @@ class BST(pl.LightningModule):
             )
         # if self.hparams.use_int:
         self.d_transformer = sum([self.embedding_dict[col].embedding_dim
-                                    if col in cat_features
+                                    if col in sparse_features
                                     else self.hparams.embedding
                                     for col in transformer_col])
-        self.num_embedding_col = list(set(transformer_col) & set(num_features))
-        self.num_embedding_dict = nn.ModuleDict()
-        for feature in self.num_embedding_col:
-            self.num_embedding_dict[feature] = nn.Embedding(1, self.hparams.embedding)
+        self.dense_embedding_col = list(set(transformer_col) & set(dense_features))
+        self.dense_embedding_dict = nn.ModuleDict()
+        for feature in self.dense_embedding_col:
+            self.dense_embedding_dict[feature] = nn.Embedding(1, self.hparams.embedding)
         # else:
         #     self.d_transformer = sum([self.embedding_dict[col].embedding_dim
-        #                               if col in cat_features
+        #                               if col in sparse_features
         #                               else 1
         #                               for col in transformer_col])
-        self.d_dnn = sum([self.embedding_dict[col].embedding_dim if col in cat_features else 1 for col in dnn_col])
+        self.d_dnn = sum([self.embedding_dict[col].embedding_dim if col in sparse_features else 1 for col in dnn_col])
         if self.hparams.use_time:
             self.time_embedding = TimeEmbedding(self.d_transformer, self.hparams.log_base, args)
         else:
             self.position_embedding = PositionEmbedding(args.max_len, self.d_transformer)
 
-        if self.hparams.use_int:
+        if self.hparams.use_int: 
             self.int_layers = nn.ModuleList(
                 [InteractingLayer(self.hparams.embedding, 1, device=self.device, use_res=(self.hparams.int_num > 0))
                  for _ in range(abs(self.hparams.int_num))]
             )
-
-        self.transformerlayers = nn.ModuleList(
-            [nn.TransformerEncoderLayer(self.d_transformer, self.hparams.num_head, batch_first=True).to(self.device) for _ in range(self.hparams.transformer_num)]
-        )
+        if self.hparams.time_aware:
+            self.time_matrix_K_emb = torch.nn.Embedding(2400 + 1, self.d_transformer)
+            self.time_matrix_V_emb = torch.nn.Embedding(2400 + 1, self.d_transformer)
+            self.transformerlayers = nn.ModuleList(
+                [TimeAwareTransformerEncoderLayer(self.d_transformer, self.hparams.num_head, batch_first=True, device=self.device)
+                 for _ in range(self.hparams.transformer_num)]
+            )
+        else:
+            self.transformerlayers = nn.ModuleList(
+                [nn.TransformerEncoderLayer(self.d_transformer, self.hparams.num_head, dropout=0.2, batch_first=True).to(self.device) for _ in range(self.hparams.transformer_num)]
+            )
         self.linear = nn.Sequential(
             nn.Linear(
                 self.d_dnn + self.d_transformer * args.max_len,
@@ -141,7 +150,7 @@ class BST(pl.LightningModule):
 
     def padding(self, item, padding_num: int):
         for col in self.transformer_col:
-            if col in self.cat_features:
+            if col in self.sparse_features:
                 item[col] = torch.where(item[col] == padding_num, self.lbes[col].classes_.size, item[col])
             else:
                 item[col] = torch.where(item[col] == padding_num, 0, item[col])
@@ -158,12 +167,12 @@ class BST(pl.LightningModule):
         target = item[self.target_col].long()
         mask = self.gen_mask(item, padding_num=-1)
         item = self.padding(item, padding_num=-1)
-        for col in self.cat_features:
+        for col in self.sparse_features:
             item[col] = self.embedding_dict[col](item[col].long())
-        for col in self.num_features:
+        for col in self.dense_features:
             item[col] = item[col].float().unsqueeze(dim=-1)
-        for col in self.num_embedding_col:
-            item[col] = item[col] * self.num_embedding_dict[col].weight[0]
+        for col in self.dense_embedding_col:
+            item[col] = item[col] * self.dense_embedding_dict[col].weight[0]
         dnn_input = torch.cat([item[col] for col in self.dnn_col], dim=-1)
         transformer_input = torch.cat([item[col] for col in self.transformer_col], dim=-1)
         return dnn_input, transformer_input, item[self.time_col], target, mask
@@ -184,9 +193,31 @@ class BST(pl.LightningModule):
             transformer_output = transformer_input + self.time_embedding(timestamp)
         else:
             transformer_output = transformer_input + self.position_embedding(transformer_input)
+            
+        if self.hparams.time_aware:
+            timestamp = torch.div(timestamp, 3600, rounding_mode='floor')
+            if "ele" not in self.hparams.data_path:
+                seq_len = timestamp.shape[1]
+                cur_time = timestamp.max(dim=1)[0]
+                delta_time = cur_time.repeat(seq_len, 1).transpose(0, 1) - timestamp
+            else:
+                delta_time = timestamp
+            def time2feat(delta_time: torch.Tensor):
+                delta_time = torch.div(delta_time.transpose(0,1), (torch.where(delta_time <= 0, torch.inf, delta_time)).min(dim=1)[0]).transpose(0,1).long()
+                batch_size, seq_len = delta_time.shape
+                relation_matrix = delta_time.unsqueeze(2).repeat(1, 1, seq_len) - delta_time.unsqueeze(1).repeat(1, seq_len, 1)
+                relation_matrix = torch.abs(relation_matrix)
+                relation_matrix = torch.where(relation_matrix <= 2400, relation_matrix, 2400)
+                return relation_matrix
+            relation_matrix = time2feat(delta_time)
+            time_matrix_K = self.time_matrix_K_emb(relation_matrix)
+            time_matrix_V = self.time_matrix_V_emb(relation_matrix)
 
-        for i in range(len(self.transformerlayers)):
-            transformer_output = self.transformerlayers[i](transformer_output, src_key_padding_mask=mask)
+            for i in range(len(self.transformerlayers)):
+                transformer_output = self.transformerlayers[i](transformer_output, time_matrix_K, time_matrix_V, src_key_padding_mask=mask)
+        else:
+            for i in range(len(self.transformerlayers)):
+                transformer_output = self.transformerlayers[i](transformer_output, src_key_padding_mask=mask)
         transformer_output = torch.flatten(transformer_output, start_dim=1)
 
         dnn_input = torch.cat((dnn_input, transformer_output), dim=1)
@@ -198,19 +229,23 @@ class BST(pl.LightningModule):
         output, target = self(batch)
         loss = self.criterion(output, target)
         self.log("train/loss", loss, on_step=True, on_epoch=False, prog_bar=False)
+        output = output.detach().cpu()
+        target = target.detach().cpu()
         return {"loss": loss, "y_pre": output, "y": target}
 
     def training_epoch_end(self, outputs):
         y_pre = torch.cat([x["y_pre"] for x in outputs])
         y = torch.cat([x["y"] for x in outputs])
         auc = self.auc(self.softmax_func(y_pre), y)
-        matrix, metrics = get_best_confusion_matrix(y.detach().cpu(), self.softmax_func(y_pre)[:, 1].detach().cpu())
+        # matrix, metrics = get_best_confusion_matrix(y.cpu().numpy(), self.softmax_func(y_pre)[:, 1].cpu().numpy())
         # self.print(matrix)
         self.log("train/auc", auc, on_step=False, on_epoch=True, prog_bar=False)
-        self.log_dict({f"train/{k}": v for k, v in metrics.items()}, on_step=False, on_epoch=True, prog_bar=False)
+        # self.log_dict({f"train/{k}": v for k, v in metrics.items()}, on_step=False, on_epoch=True, prog_bar=False)
 
     def validation_step(self, batch, batch_idx):
         output, target = self(batch)
+        output = output.detach().cpu()
+        target = target.detach().cpu()
         return {"y_pre": output, "y": target}
 
     def validation_epoch_end(self, outputs):
@@ -219,14 +254,16 @@ class BST(pl.LightningModule):
         loss = self.criterion(y_pre, y)
         auc = self.auc(self.softmax_func(y_pre), y)
 
-        matrix, metrics = get_best_confusion_matrix(y.cpu(), self.softmax_func(y_pre)[:, 1].cpu())
+        # matrix, metrics = get_best_confusion_matrix(y.cpu().numpy(), self.softmax_func(y_pre)[:, 1].cpu().numpy())
         # self.print(matrix)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=False)
         self.log("val/auc", auc, on_step=False, on_epoch=True, prog_bar=False)
-        self.log_dict({f"val/{k}": v for k, v in metrics.items()}, on_step=False, on_epoch=True, prog_bar=False)
+        # self.log_dict({f"val/{k}": v for k, v in metrics.items()}, on_step=False, on_epoch=True, prog_bar=False)
 
     def test_step(self, batch, batch_idx):
         output, target = self(batch)
+        output = output.detach().cpu()
+        target = target.detach().cpu()
         return {"y_pre": output, "y": target}
 
     def test_epoch_end(self, outputs):
@@ -235,11 +272,11 @@ class BST(pl.LightningModule):
         loss = self.criterion(y_pre, y)
         auc = self.auc(self.softmax_func(y_pre), y)
 
-        matrix, metrics = get_best_confusion_matrix(y.cpu(), self.softmax_func(y_pre)[:, 1].cpu())
+        # matrix, metrics = get_best_confusion_matrix(y.cpu().numpy(), self.softmax_func(y_pre)[:, 1].cpu().numpy())
         # self.print(matrix)
         result = {"test/log_loss": loss,
-                  "test/auc": auc,
-                  **{f"test/{k}": v for k, v in metrics.items()}}
+                  "test/auc": auc}
+                #   **{f"test/{k}": v for k, v in metrics.items()}}
         self.logger.log_hyperparams(self.hparams, metrics=result)
 
     def configure_optimizers(self):

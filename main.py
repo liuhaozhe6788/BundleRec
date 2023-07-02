@@ -13,9 +13,9 @@ from utils import find_ckpt_file
 
 
 def bundle_main(args, v_num, train_dataset, val_dataset, test_dataset):
-    cat_features = ['uid', 'is_visitor', 'gender', 'is_up_to_date_version', 'register_country', 'register_device',
+    sparse_features = ['uid', 'is_visitor', 'gender', 'is_up_to_date_version', 'register_country', 'register_device',
                       'register_device_brand', 'register_os', 'bundle_id']
-    num_features = ['register_time', 'bundle_price', 'island_no', 'spin_stock', 'coin_stock',
+    dense_features = ['register_time', 'bundle_price', 'island_no', 'spin_stock', 'coin_stock',
                       'diamond_stock', 'island_complete_gap_coin', 'island_complete_gap_building_cnt',
                       'tournament_rank', 'login_cnt_1d', 'ads_watch_cnt_1d', 'register_country_arpu',
                       'life_time', 'star', 'battle_pass_exp', 'pet_heart_stock', 'pet_exp_stock', 'friend_cnt',
@@ -31,28 +31,28 @@ def bundle_main(args, v_num, train_dataset, val_dataset, test_dataset):
     target_col = 'impression_result'
     time_col = 'ftime'
     pl.seed_everything(args.seed)
-    model = BST(cat_features=cat_features,
-                num_features=num_features,
+    model = BST(sparse_features=sparse_features,
+                dense_features=dense_features,
                 dnn_col=dnn_col,
                 transformer_col=transformer_col,
                 target_col=target_col,
                 time_col=time_col,
                 args=args)
-    logger = TensorBoardLogger(save_dir='logs/bundle_logs/train' if args.force_restart else 'logs/bundle_logs/test',
-                               name='bundle_BST_final',
-                               version=v_num)
+    logger = TensorBoardLogger(save_dir='logs',
+                               name='bundle_logs',
+                               version=args.name if args.force_restart else f'{args.name}_test')
     callback = ModelCheckpoint(monitor="val/auc",
                                mode="max",
                                save_top_k=1,
                                filename='epoch={epoch}-step={step}-val_auc={val/auc:.4f}-log_loss={val\loss:.4f}',
                                save_weights_only=True,
                                auto_insert_metric_name=False)
-    callback2 = EarlyStopping(monitor="val/auc",
-                              mode="max",
-                              patience=5)
+    # callback2 = EarlyStopping(monitor="val/auc",
+    #                           mode="max",
+    #                           patience=5)
     trainer = pl.Trainer(accelerator='gpu',
                          devices=1,
-                         callbacks=[callback, callback2],
+                         callbacks=[callback],
                          # auto_scale_batch_size='binsearch',
                          # auto_lr_find=True,
                          val_check_interval=None,
@@ -76,13 +76,13 @@ def bundle_main(args, v_num, train_dataset, val_dataset, test_dataset):
                                             num_workers=0
                                             ),
                     )
-        trainer.test(ckpt_path=callback.best_model_path,
-                    dataloaders=DataLoader(test_dataset,
-                                            batch_size=args.batch_size,
-                                            shuffle=False,
-                                            num_workers=0
-                                            ),
-                    )
+        # trainer.test(ckpt_path=callback.best_model_path,
+        #             dataloaders=DataLoader(test_dataset,
+        #                                     batch_size=args.batch_size,
+        #                                     shuffle=False,
+        #                                     num_workers=0
+        #                                     ),
+        #             )
     else:
         checkpoint = torch.load(args.ckpt)
 
@@ -113,16 +113,16 @@ def ele_main(args, v_num, train_dataset, val_dataset, test_dataset):
     target_col = 'label'
     time_col = 'timediff_list'
     pl.seed_everything(args.seed)
-    model = BST(cat_features=cat_features,
-                num_features=num_features,
+    model = BST(sparse_features=cat_features,
+                dense_features=num_features,
                 dnn_col=dnn_col,
                 transformer_col=transformer_col,
                 target_col=target_col,
                 time_col=time_col,
                 args=args)
-    logger = TensorBoardLogger(save_dir='logs/ele_logs/train' if args.force_restart else 'logs/ele_logs/test',
-                               name='fixed',
-                               version=v_num)
+    logger = TensorBoardLogger(save_dir='logs',
+                               name='ele_logs',
+                               version=args.name if args.force_restart else f'{args.name}_test')
     
     callback = ModelCheckpoint(monitor="val/auc",
                 mode="max",
@@ -130,12 +130,12 @@ def ele_main(args, v_num, train_dataset, val_dataset, test_dataset):
                 filename='epoch={epoch}-step={step}-val_auc={val/auc:.4f}-log_loss={val\loss:.4f}',
                 save_weights_only=True,
                 auto_insert_metric_name=False)
-    callback2 = EarlyStopping(monitor="val/auc",
-                            mode="max",
-                            patience=1)
+    # callback2 = EarlyStopping(monitor="val/auc",
+    #                         mode="max",
+    #                         patience=1)
     trainer = pl.Trainer(accelerator='gpu',
                         devices=1,
-                        callbacks=[callback, callback2],
+                        callbacks=[callback],
                         # auto_scale_batch_size='binsearch',
                         # auto_lr_find=True,
                         val_check_interval=None,
@@ -160,13 +160,13 @@ def ele_main(args, v_num, train_dataset, val_dataset, test_dataset):
                                             ),
                     )
 
-        trainer.test(ckpt_path=callback.best_model_path,
-                    dataloaders=DataLoader(test_dataset,
-                                        batch_size=args.batch_size,
-                                        shuffle=False,
-                                        num_workers=0
-                                        ),
-                    )
+        # trainer.test(ckpt_path=callback.best_model_path,
+        #             dataloaders=DataLoader(test_dataset,
+        #                                 batch_size=args.batch_size,
+        #                                 shuffle=False,
+        #                                 num_workers=0
+        #                                 ),
+        #             )
 
     else:
         checkpoint = torch.load(args.ckpt)
@@ -193,28 +193,28 @@ def movie_main(args, v_num, train_dataset, val_dataset, test_dataset):
     target_col = 'label'
     time_col = 'timestamps'
     pl.seed_everything(args.seed)
-    model = BST(cat_features=cat_features,
-                num_features=num_features,
+    model = BST(sparse_features=cat_features,
+                dense_features=num_features,
                 dnn_col=dnn_col,
                 transformer_col=transformer_col,
                 target_col=target_col,
                 time_col=time_col,
                 args=args)
-    logger = TensorBoardLogger(save_dir='logs/movie_logs/train' if args.force_restart else 'logs/movie_logs/test',
-                               name='fixed',
-                               version=v_num)
+    logger = TensorBoardLogger(save_dir='logs',
+                               name='movie_logs',
+                               version=args.name if args.force_restart else f'{args.name}_test')
     callback = ModelCheckpoint(monitor="val/auc",
                                mode="max",
                                save_top_k=1,
                                filename='epoch={epoch}-step={step}-val_auc={val/auc:.4f}-log_loss={val\loss:.4f}',
                                save_weights_only=True,
                                auto_insert_metric_name=False)
-    callback2 = EarlyStopping(monitor="val/auc",
-                              mode="max",
-                              patience=5)
+    # callback2 = EarlyStopping(monitor="val/auc",
+    #                           mode="max",
+    #                           patience=5)
     trainer = pl.Trainer(accelerator='gpu',
                          devices=1,
-                         callbacks=[callback, callback2],
+                         callbacks=[callback],
                          # auto_scale_batch_size='binsearch',
                          # auto_lr_find=True,
                          val_check_interval=None,
@@ -237,13 +237,13 @@ def movie_main(args, v_num, train_dataset, val_dataset, test_dataset):
                                             num_workers=0
                                             ),
                     )
-        trainer.test(ckpt_path=callback.best_model_path,
-                    dataloaders=DataLoader(test_dataset,
-                                            batch_size=args.batch_size,
-                                            shuffle=False,
-                                            num_workers=0
-                                            ),
-                    )
+        # trainer.test(ckpt_path=callback.best_model_path,
+        #             dataloaders=DataLoader(test_dataset,
+        #                                     batch_size=args.batch_size,
+        #                                     shuffle=False,
+        #                                     num_workers=0
+        #                                     ),
+        #             )
     else:
         checkpoint = torch.load(args.ckpt)
 
@@ -261,10 +261,10 @@ def movie_main(args, v_num, train_dataset, val_dataset, test_dataset):
 def run_bundle_main():
     train_dataset = BundleDataset(os.path.join(args.data_path, "train_data.csv"), args.max_len) if args.force_restart else None
     val_dataset = BundleDataset(os.path.join(args.data_path, "val_data.csv"), args.max_len) if args.force_restart else None
-    test_dataset = BundleDataset(os.path.join(args.data_path, "test_data.csv"), args.max_len, True)
+    test_dataset = BundleDataset(os.path.join(args.data_path, "test_data.csv"), args.max_len, True) if not args.force_restart else None
 
     for hparam in hparams:
-        args.use_time, args.use_int, args.int_num, args.log_base, args.ckpt = hparam
+        args.use_time, args.use_int, args.int_num, args.log_base, args.time_aware, args.name, args.ckpt = hparam
         print(vars(args))
         bundle_main(args, f"lr={args.lr} mean_std=1 res=concat  use_time={args.use_time} use_int={args.use_int} log_base={args.log_base} int_num={args.int_num}", train_dataset, val_dataset, test_dataset)
 
@@ -274,7 +274,7 @@ def run_ele_main():
     test_dataset = EleDataset(os.path.join(args.data_path, "test_data.csv"), args.max_len, True)
 
     for hparam in hparams:
-        args.use_time, args.use_int, args.int_num, args.log_base, args.ckpt = hparam
+        args.use_time, args.use_int, args.int_num, args.log_base, args.time_aware, args.name, args.ckpt = hparam
         print(vars(args))
         ele_main(args, f"lr={args.lr} mean_std=1 res=concat  use_time={args.use_time} use_int={args.use_int} log_base={args.log_base} int_num={args.int_num}", train_dataset, val_dataset, test_dataset)
 
@@ -285,7 +285,7 @@ def run_movie_main():
     test_dataset = MovieDataset(os.path.join(args.data_path, "test_data.csv"), args.max_len, True)
 
     for hparam in hparams:
-        args.use_time, args.use_int, args.int_num, args.log_base, args.ckpt = hparam
+        args.use_time, args.use_int, args.int_num, args.log_base, args.time_aware, args.name, args.ckpt = hparam
         print(vars(args))
         movie_main(args, f"lr={args.lr} mean_std=1 res=concat  use_time={args.use_time} use_int={args.use_int} log_base={args.log_base} int_num={args.int_num}", train_dataset, val_dataset, test_dataset)
 
@@ -302,27 +302,34 @@ if __name__ == '__main__':
     parser.add_argument("--transformer_num", default=2, type=int)  # transformer层的层数
     parser.add_argument("--embedding", default=8, type=int)  # 类别特征的embedding向量维度
     parser.add_argument("--num_head", default=8, type=int)  # transformer层中多头自注意力的头数
+    parser.add_argument('--time_aware', default=False, type=bool)  # 是否使用TiSASRec
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--data_path', type=str)
     parser.add_argument('--max_len', default=8, type=int)  # 最长序列长度
     parser.add_argument('--force_restart', action="store_true")  # 是否从头训练模型
     parser.add_argument('--ckpt', type=str)  # 预训练模型路径
+    parser.add_argument('--name', type=str)  # 模型名称
     parser.set_defaults(max_epochs=50)
     args = parser.parse_args()
 
     hparams = [
-        [False, False, 0, 0, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/BST/checkpoints/")],  # BST
-        [True, False, 0, 5, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE_base5/checkpoints/")],  # LogTE+base5
-        [True, True, 1, 5, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC1/checkpoints/")],  # LogTE+FC+base5+numFC1
-        [True, True, 1, 2, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base2+numFC1/checkpoints/")],  # LogTE+FC+base2+numFC1
-        [True, True, 1, 10, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base10+numFC1/checkpoints/")],  # LogTE+FC+base10+numFC1
-        [True, True, 2, 5, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC2/checkpoints/")],  # LogTE+FC+base5+numFC2
-        [True, True, 3, 5, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC3/checkpoints/")],  # LogTE+FC+base5+numFC3
-        [False, True, 1, 0, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/PE+FC+base5+numFC1/checkpoints/")],  # PE+FC+numFC1
-        [True, True, 1, -2, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LinearTE+FC+base5+numFC1/checkpoints/")],  # LinearTE+FC+numFC1
-        # [False, True, 2, 0, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/PE+FC+base5+numFC2/checkpoints/")],  # PE+FC+numFC2
-        # [False, True, 3, 0, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/PE+FC+base5+numFC3/checkpoints/")],  # PE+FC+numFC3
+        [True, False, 0, -2, False, "BST", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/BST/checkpoints/")],  # BST
+    #     [True, False, 0, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE_base5/checkpoints/")],  # LogTE+base5
+    #     [True, True, 1, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC1/checkpoints/")],  # LogTE+FC+base5+numFC1
+    #     [True, True, 1, 2, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base2+numFC1/checkpoints/")],  # LogTE+FC+base2+numFC1
+    #     [True, True, 1, 10, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base10+numFC1/checkpoints/")],  # LogTE+FC+base10+numFC1
+    #     [True, True, 2, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC2/checkpoints/")],  # LogTE+FC+base5+numFC2
+    #     [True, True, 3, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC3/checkpoints/")],  # LogTE+FC+base5+numFC3
+        [False, False, 0, 0, False, "PE", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/PE/checkpoints/")],  # PE
+        [False, True, 1, 0, False, "FCSeq1", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq1/checkpoints/")],  # PE+FC+numFC1
+        [False, True, 2, 0, False, "FCSeq2", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq2/checkpoints/")],  # PE+FC+numFC2
+        [False, True, 3, 0, False, "FCSeq3", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq3/checkpoints/")],  # PE+FC+numFC3
+        [False, True, 4, 0, False, "FCSeq4", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq4/checkpoints/")],  # PE+FC+numFC4
+        [False, True, 5, 0, False, "FCSeq5", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq5/checkpoints/")],  # PE+FC+numFC5
+        # [False, True, 6, 0, False, "FCSeq5", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq5/checkpoints/")],  # PE+FC+numFC6
+        [False, False, 0, 0, True, "TiSASRec", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/TiSASRec/checkpoints/")],  # TiSASRec
     ]
+
     if args.dataset == "ele":
         run_ele_main()
     elif args.dataset == "movie":

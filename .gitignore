@@ -6,3 +6,4 @@ data/taobao
 logs
 *__pycache__
 *.idea
+*.log
