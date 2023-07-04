@@ -14,26 +14,26 @@
             "justMyCode": true,
             "args": [
                 "--dataset",
-                "bundle",
+                "movie",
                 "--batch_size",
-                "512",
+                "2",
                 "--lr",
                 "1e-3",
                 "--transformer_num",
-                "2",
+                "1",
                 "--embedding",
                 "8",
                 "--num_head",
                 "8",
                 "--time_aware",
-                "True",
+                "False",
                 "--seed",
                 "0",
                 "--data_path",
-                "./data/bundle_time",
+                "./data/movielens1m",
                 "--max_len",
                 "8",
-                "--force_restart"
+                // "--force_restart"
             ]
         }
     ]

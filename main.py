@@ -313,19 +313,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     hparams = [
-        [True, False, 0, -2, False, "BST", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/BST/checkpoints/")],  # BST
+        # [True, False, 0, -2, False, "BST", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/BST/checkpoints/")],  # BST
     #     [True, False, 0, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE_base5/checkpoints/")],  # LogTE+base5
     #     [True, True, 1, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC1/checkpoints/")],  # LogTE+FC+base5+numFC1
     #     [True, True, 1, 2, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base2+numFC1/checkpoints/")],  # LogTE+FC+base2+numFC1
     #     [True, True, 1, 10, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base10+numFC1/checkpoints/")],  # LogTE+FC+base10+numFC1
     #     [True, True, 2, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC2/checkpoints/")],  # LogTE+FC+base5+numFC2
     #     [True, True, 3, 5, False, None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/LogTE+FC+base5+numFC3/checkpoints/")],  # LogTE+FC+base5+numFC3
-        [False, False, 0, 0, False, "PE", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/PE/checkpoints/")],  # PE
-        [False, True, 1, 0, False, "FCSeq1", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq1/checkpoints/")],  # PE+FC+numFC1
-        [False, True, 2, 0, False, "FCSeq2", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq2/checkpoints/")],  # PE+FC+numFC2
+        # [False, False, 0, 0, False, "PE", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/PE/checkpoints/")],  # PE
+        # [False, True, 1, 0, False, "FCSeq1", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq1/checkpoints/")],  # PE+FC+numFC1
+        # [False, True, 2, 0, False, "FCSeq2", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq2/checkpoints/")],  # PE+FC+numFC2
         [False, True, 3, 0, False, "FCSeq3", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq3/checkpoints/")],  # PE+FC+numFC3
-        [False, True, 4, 0, False, "FCSeq4", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq4/checkpoints/")],  # PE+FC+numFC4
-        [False, True, 5, 0, False, "FCSeq5", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq5/checkpoints/")],  # PE+FC+numFC5
+        # [False, True, 4, 0, False, "FCSeq4", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq4/checkpoints/")],  # PE+FC+numFC4
+        # [False, True, 5, 0, False, "FCSeq5", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq5/checkpoints/")],  # PE+FC+numFC5
         # [False, True, 6, 0, False, "FCSeq5", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/FCSeq5/checkpoints/")],  # PE+FC+numFC6
         [False, False, 0, 0, True, "TiSASRec", None if args.force_restart else find_ckpt_file(f"logs/{args.dataset}_logs/TiSASRec/checkpoints/")],  # TiSASRec
     ]

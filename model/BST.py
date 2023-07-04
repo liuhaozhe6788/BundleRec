@@ -86,6 +86,8 @@ class BST(pl.LightningModule):
             self.mms = pickle.load(file)
 
         self.embedding_dict = nn.ModuleDict()
+
+        # embedding lookup table for all sparse features
         for feature in self.sparse_features:
             self.embedding_dict[feature] = nn.Embedding(
                 self.lbes[feature].classes_.size + 1,
@@ -99,6 +101,8 @@ class BST(pl.LightningModule):
                                     for col in transformer_col])
         self.dense_embedding_col = list(set(transformer_col) & set(dense_features))
         self.dense_embedding_dict = nn.ModuleDict()
+
+        # embedding lookup table for all dense features
         for feature in self.dense_embedding_col:
             self.dense_embedding_dict[feature] = nn.Embedding(1, self.hparams.embedding)
         # else:
